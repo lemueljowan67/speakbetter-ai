@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpeakBetter AI - Grammar Coach</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #0b1120;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 20px 14px 40px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      text-align: center;
+      color: #e2e8f0;
+    }
+
+    .api-box {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .api-label {
+      font-size: 0.85rem;
+      color: #93c5fd;
+      font-weight: 600;
+    }
+
+    .api-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="password"], input[type="text"] {
+      flex: 1;
+      background-color: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #f1f5f9;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #3b82f6;
+    }
+
+    .api-hint {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      background-color: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 14px;
+      color: #f1f5f9;
+      font-size: 1rem;
+      line-height: 1.5;
+      resize: vertical;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: #3b82f6;
+    }
+
+    .char-count {
+      text-align: right;
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background-color: #2563eb;
+      color: #ffffff;
+    }
+
+    .btn-success {
+      background-color: #166534;
+      color: #4ade80;
+    }
+
+    .btn-success.ready {
+      background-color: #15803d;
+      color: #ffffff;
+    }
+
+    .btn-secondary {
+      background-color: #334155;
+      color: #f1f5f9;
+    }
+
+    .btn-listening {
+      background-color: #dc2626;
+      color: #ffffff;
+    }
+
+    .status-box {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+
+    .status-box.ok {
+      color: #4ade80;
+      border-color: #166534;
+    }
+
+    .status-box.error {
+      color: #f87171;
+      border-color: #991b1b;
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-top: 4px;
+    }
+
+    .preview-box {
+      background-color: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 12px;
+      min-height: 54px;
+      font-size: 0.98rem;
+      line-height: 1.5;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+    }
+
+    .issues-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .issue-card {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.9rem;
+    }
+
+    .old-text {
+      color: #f87171;
+      text-decoration: line-through;
+      margin-right: 6px;
+    }
+
+    .new-text {
+      color: #4ade80;
+      font-weight: 600;
+    }
+
+    .issue-reason {
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="header">
+      <h1>SpeakBetter AI - Grammar Coach</h1>
+    </div>
+
+    <!-- API Key Box -->
+    <div class="api-box">
+      <div class="api-label">Gemini API Key (Optional - para sa full AI check)</div>
+      <div class="api-row">
+        <input type="password" id="apiKeyInput" placeholder="Paste AIzaSy... key here" />
+        <button class="btn-secondary" id="toggleKeyBtn" type="button">Show</button>
+        <button class="btn-primary" id="saveKeyBtn" type="button">Save</button>
+      </div>
+      <div class="api-hint" id="apiHint">
+        Walang key? Gagamitin nito ang basic fixer. May key? I-paste at i-click ang <strong>Save</strong> (makukuha sa Google AI Studio).
+      </div>
+    </div>
+
+    <!-- Main Text Input -->
+    <div>
+      <textarea id="inputText" maxlength="20000" placeholder="Type or speak your sentence here...">What is your color favorite?</textarea>
+      <div class="char-count" id="charCount">28 / 20,000 characters</div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="button-grid">
+      <button class="btn-primary" id="checkBtn">Check Grammar</button>
+      <button class="btn-success" id="fixAllBtn" disabled>Fix All</button>
+      <button class="btn-secondary" id="speakBtn">🎤 Speak</button>
+      <button class="btn-secondary" id="listenBtn">🔊 Listen</button>
+      <button class="btn-secondary" id="copyBtn">Copy</button>
+      <button class="btn-secondary" id="clearBtn">Clear</button>
+    </div>
+
+    <div class="status-box" id="statusBox">
+      Handa na. I-click ang <strong>Check Grammar</strong> para suriin ang pangungusap.
+    </div>
+
+    <div class="section-title">Corrected Text (Preview)</div>
+    <div class="preview-box" id="previewBox">What is your color favorite?</div>
+
+    <div class="button-grid">
+      <button class="btn-primary" id="copyCorrectedBtn">Copy Corrected Text</button>
+      <button class="btn-secondary" id="listenCorrectedBtn">🔊 Listen to Correction</button>
+    </div>
+
+    <div class="section-title" id="issuesTitle" style="display: none;">Detected Issues</div>
+    <div class="issues-list" id="issuesList"></div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "speakbetter_gemini_api_key";
+
+    const apiKeyInput = document.getElementById("apiKeyInput");
+    const toggleKeyBtn = document.getElementById("toggleKeyBtn");
+    const saveKeyBtn = document.getElementById("saveKeyBtn");
+    const apiHint = document.getElementById("apiHint");
+
+    const inputText = document.getElementById("inputText");
+    const charCount = document.getElementById("charCount");
+    const checkBtn = document.getElementById("checkBtn");
+    const fixAllBtn = document.getElementById("fixAllBtn");
+    const speakBtn = document.getElementById("speakBtn");
+    const listenBtn = document.getElementById("listenBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const statusBox = document.getElementById("statusBox");
+    const previewBox = document.getElementById("previewBox");
+    const copyCorrectedBtn = document.getElementById("copyCorrectedBtn");
+    const listenCorrectedBtn = document.getElementById("listenCorrectedBtn");
+    const issuesTitle = document.getElementById("issuesTitle");
+    const issuesList = document.getElementById("issuesList");
+
+    let currentCorrectedText = inputText.value;
+    let recognition = null;
+    let isListening = false;
+
+    // Load saved key if available
+    const savedKey = localStorage.getItem(STORAGE_KEY) || "";
+    if (savedKey) {
+      apiKeyInput.value = savedKey;
+      apiHint.innerHTML = 'Naka-save ang API key mo sa browser na ito.';
+    }
+
+    toggleKeyBtn.addEventListener("click", () => {
+      const isPass = apiKeyInput.type === "password";
+      apiKeyInput.type = isPass ? "text" : "password";
+      toggleKeyBtn.textContent = isPass ? "Hide" : "Show";
+    });
+
+    saveKeyBtn.addEventListener("click", () => {
+      const key = apiKeyInput.value.trim();
+      if (key) {
+        localStorage.setItem(STORAGE_KEY, key);
+        apiHint.innerHTML = '<span style="color:#4ade80;">Na-save na ang API key!</span>';
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+        apiHint.innerHTML = 'Tinanggal ang API key. Gagamitin ang basic fixer.';
+      }
+    });
+
+    function updateCharCount() {
+      charCount.textContent = `${inputText.value.length.toLocaleString()} / 20,000 characters`;
+    }
+
+    inputText.addEventListener("input", () => {
+      updateCharCount();
+      previewBox.textContent = inputText.value;
+      currentCorrectedText = inputText.value;
+      fixAllBtn.disabled = true;
+      fixAllBtn.classList.remove("ready");
+    });
+
+    // Basic fallback rules if no API key is provided
+    function basicGrammarCheck(text) {
+      let fixed = text;
+      const issues = [];
+
+      const rules = [
+        { regex: /\bcolor favorite\b/gi, replacement: "favorite color", reason: "Sa English, nauuna ang adjective ('favorite') bago ang noun ('color')." },
+        { regex: /\bfood favorite\b/gi, replacement: "favorite food", reason: "Dapat 'favorite food', hindi 'food favorite'." },
+        { regex: /\bsong favorite\b/gi, replacement: "favorite song", reason: "Dapat 'favorite song', hindi 'song favorite'." },
+        { regex: /\bmovie favorite\b/gi, replacement: "favorite movie", reason: "Dapat 'favorite movie', hindi 'movie favorite'." },
+        { regex: /\bi\b/g, replacement: "I", reason: "Dapat naka-capital letter ang 'I'." },
+        { regex: /\bdont\b/gi, replacement: "don't", reason: "Kulangan ng apostrophe ang 'don't'." },
+        { regex: /\bcant\b/gi, replacement: "can't", reason: "Kulangan ng apostrophe ang 'can't'." },
+        { regex: /\bwont\b/gi, replacement: "won't", reason: "Kulangan ng apostrophe ang 'won't'." },
+        { regex: /\bim\b/gi, replacement: "I'm", reason: "Dapat 'I'm'." }
+      ];
+
+      rules.forEach((rule) => {
+        const matches = fixed.match(rule.regex);
+        if (matches) {
+          matches.forEach((m) => {
+            issues.push({
+              original: m,
+              suggestion: rule.replacement,
+              explanation: rule.reason
+            });
+          });
+          fixed = fixed.replace(rule.regex, rule.replacement);
+        }
+      });
+
+      return { correctedText: fixed, issues };
+    }
+
+    async function checkGrammar() {
+      const text = inputText.value.trim();
+      if (!text) {
+        statusBox.className = "status-box error";
+        statusBox.textContent = "Maglagay muna ng pangungusap.";
+        return;
+      }
+
+      const apiKey = apiKeyInput.value.trim() || localStorage.getItem(STORAGE_KEY) || "";
+
+      checkBtn.disabled = true;
+      checkBtn.textContent = "Checking...";
+      issuesList.innerHTML = "";
+      issuesTitle.style.display = "none";
+
+      if (!apiKey) {
+        const basic = basicGrammarCheck(text);
+        currentCorrectedText = basic.correctedText;
+        previewBox.textContent = currentCorrectedText;
+        renderIssues(basic.issues);
+
+        if (basic.issues.length > 0) {
+          statusBox.className = "status-box";
+          statusBox.textContent = `Basic check: May nakitang ${basic.issues.length} pagbabago. I-click ang "Fix All" para ilapat.`;
+          fixAllBtn.disabled = false;
+          fixAllBtn.classList.add("ready");
+        } else {
+          statusBox.className = "status-box ok";
+          statusBox.textContent = "Basic check: Walang nakitang common error (maglagay ng API key para sa mas malalim na AI check).";
+          fixAllBtn.disabled = true;
+          fixAllBtn.classList.remove("ready");
+        }
+
+        checkBtn.disabled = false;
+        checkBtn.textContent = "Check Grammar";
+        return;
+      }
+
+      statusBox.className = "status-box";
+      statusBox.textContent = "Sinusuri ng Gemini AI ang grammar, word order, at spelling...";
+
+      const prompt = `Fix all English grammar, spelling, punctuation, and word-order errors (like "color favorite" -> "favorite color").
+Return ONLY valid JSON:
+{
+  "correctedText": "full corrected text",
+  "issues": [
+    { "original": "wrong text", "suggestion": "fixed text", "explanation": "short reason" }
+  ]
+}
+Text: """${text}"""`;
+
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+            })
+          }
+        );
+
+        if (!res.ok) throw new Error(`API Error (${res.status})`);
+
+        const data = await res.json();
+        const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        const parsed = JSON.parse(raw);
+
+        currentCorrectedText = parsed.correctedText || text;
+        previewBox.textContent = currentCorrectedText;
+        const issues = parsed.issues || [];
+
+        if (issues.length === 0 && currentCorrectedText.trim() === text) {
+          statusBox.className = "status-box ok";
+          statusBox.textContent = "Walang nakitang error. Tama na ang pangungusap!";
+          fixAllBtn.disabled = true;
+          fixAllBtn.classList.remove("ready");
+        } else {
+          statusBox.className = "status-box";
+          statusBox.textContent = `May nakitang ${issues.length || 1} pagbabago. I-click ang "Fix All" para maitama.`;
+          fixAllBtn.disabled = false;
+          fixAllBtn.classList.add("ready");
+          renderIssues(issues);
+        }
+      } catch (err) {
+        statusBox.className = "status-box error";
+        statusBox.textContent = `May error: ${err.message}. Suriin kung tama ang API key mo.`;
+      } finally {
+        checkBtn.disabled = false;
+        checkBtn.textContent = "Check Grammar";
+      }
+    }
+
+    function renderIssues(issues) {
+      issuesList.innerHTML = "";
+      if (!issues.length) return;
+      issuesTitle.style.display = "block";
+      issues.forEach((item) => {
+        const div = document.createElement("div");
+        div.className = "issue-card";
+        div.innerHTML = `
+          <div>
+            <span class="old-text">${escapeHtml(item.original)}</span>
+            <span class="new-text">→ ${escapeHtml(item.suggestion)}</span>
+          </div>
+          <div class="issue-reason">${escapeHtml(item.explanation || "")}</div>
+        `;
+        issuesList.appendChild(div);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    checkBtn.addEventListener("click", checkGrammar);
+
+    fixAllBtn.addEventListener("click", () => {
+      if (!currentCorrectedText) return;
+      inputText.value = currentCorrectedText;
+      updateCharCount();
+      statusBox.className = "status-box ok";
+      statusBox.textContent = "Naitama na ang text!";
+      fixAllBtn.disabled = true;
+      fixAllBtn.classList.remove("ready");
+      issuesList.innerHTML = "";
+      issuesTitle.style.display = "none";
+    });
+
+    copyBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(inputText.value);
+      copyBtn.textContent = "Copied ✓";
+      setTimeout(() => (copyBtn.textContent = "Copy"), 1500);
+    });
+
+    copyCorrectedBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(previewBox.textContent);
+      copyCorrectedBtn.textContent = "Copied ✓";
+      setTimeout(() => (copyCorrectedBtn.textContent = "Copy Corrected Text"), 1500);
+    });
+
+    clearBtn.addEventListener("click", () => {
+      inputText.value = "";
+      previewBox.textContent = "";
+      currentCorrectedText = "";
+      issuesList.innerHTML = "";
+      issuesTitle.style.display = "none";
+      fixAllBtn.disabled = true;
+      fixAllBtn.classList.remove("ready");
+      statusBox.className = "status-box";
+      statusBox.textContent = "Na-clear na.";
+      updateCharCount();
+    });
+
+    function speakText(text) {
+      if (!text.trim()) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-US";
+      window.speechSynthesis.speak(u);
+    }
+
+    listenBtn.addEventListener("click", () => speakText(inputText.value));
+    listenCorrectedBtn.addEventListener("click", () => speakText(previewBox.textContent));
+
+    speakBtn.addEventListener("click", () => {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        alert("Hindi suportado ang speech recognition sa browser na ito.");
+        return;
+      }
+      if (isListening && recognition) {
+        recognition.stop();
+        return;
+      }
+      recognition = new SR();
+      recognition.lang = "en-US";
+      recognition.onstart = () => {
+        isListening = true;
+        speakBtn.textContent = "⏹ Stop";
+        speakBtn.classList.add("btn-listening");
+      };
+      recognition.onresult = (e) => {
+        const transcript = e.results[0][0].transcript;
+        inputText.value = inputText.value ? `${inputText.value.trim()} ${transcript}` : transcript;
+        updateCharCount();
+        previewBox.textContent = inputText.value;
+      };
+      recognition.onend = () => {
+        isListening = false;
+        speakBtn.textContent = "🎤 Speak";
+        speakBtn.classList.remove("btn-listening");
+      };
+      recognition.start();
+    });
+  </script>
+</body>
+</html>
